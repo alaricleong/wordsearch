@@ -136,7 +136,7 @@
         </div>
     </div>
 
-    <!-- Give Up / Hint Area (Now at Top) -->
+    <!-- Give Up / Hint Area -->
     <div class="flex justify-end mb-2 shrink-0 pr-1">
         <button onclick="giveUp()" class="text-[10px] font-bold text-slate-400 hover:text-rose-500 transition-colors flex items-center gap-1 uppercase tracking-tighter">
             <span>🏳️</span> Give Up
@@ -160,7 +160,7 @@
     <div id="word-list-container">
         <div class="flex items-center gap-3 mb-3 px-2">
             <div class="h-[2px] flex-grow bg-slate-100"></div>
-            <span id="words-left-count" class="text-[10px] font-black text-slate-400 tracking-widest uppercase">8 Words Hidden</span>
+            <span id="words-left-count" class="text-[10px] font-black text-slate-400 tracking-widest uppercase">Initializing...</span>
             <div class="h-[2px] flex-grow bg-slate-100"></div>
         </div>
         <div id="word-list" class="flex flex-wrap gap-2 justify-center overflow-y-auto pb-10">
@@ -181,10 +181,17 @@
     </div>
 
     <script>
+        // Expanded word banks to ensure unique sets every time
+        const WORD_BANKS = {
+            easy: ["CAT", "DOG", "SUN", "FISH", "BIRD", "TREE", "BOX", "STAR", "MILK", "CAKE", "FROG", "DUCK", "MOON", "BOOK", "LAMP", "SNOW", "RAIN", "FIRE", "SHIP", "LEAF", "BALL", "KITE", "SOCK", "JUMP"],
+            medium: ["ORANGE", "BANANA", "CHERRY", "GRAPES", "LEMON", "APPLE", "PEACH", "MELON", "WINTER", "SUMMER", "SPRING", "AUTUMN", "ROCKET", "PLANET", "SILVER", "GOLDEN", "BRIGHT", "GENTLE", "FLOWER", "GARDEN", "SCHOOL", "COFFEE", "TURTLE", "RABBIT"],
+            hard: ["GALAXY", "QUASAR", "NEBULA", "COMET", "PLANET", "ORBIT", "ROCKET", "STAR", "SPACE", "MOON", "DIAMOND", "CRYSTAL", "PYRAMID", "VOLCANO", "PHANTOM", "THUNDER", "WHISPER", "JOURNEY", "MYSTERY", "KINGDOM", "ANCIENT", "BRAVERY", "FREEDOM", "HARMONY"]
+        };
+
         const CONFIG = {
-            easy: { size: 6, words: ["CAT", "DOG", "SUN", "FISH", "BIRD", "TREE", "BOX", "STAR"] },
-            medium: { size: 8, words: ["ORANGE", "BANANA", "CHERRY", "GRAPES", "LEMON", "APPLE", "PEACH", "MELON"] },
-            hard: { size: 10, words: ["GALAXY", "QUASAR", "NEBULA", "COMET", "PLANET", "ORBIT", "ROCKET", "STAR", "SPACE", "MOON"] }
+            easy: { size: 6, wordCount: 6 },
+            medium: { size: 8, wordCount: 8 },
+            hard: { size: 10, wordCount: 10 }
         };
 
         let difficulty = 'easy';
@@ -214,11 +221,16 @@
         }
 
         function initGame() {
-            words = [...CONFIG[difficulty].words].sort(() => Math.random() - 0.5);
+            // Pick a random subset from the bank to ensure variety
+            const fullBank = WORD_BANKS[difficulty];
+            const count = CONFIG[difficulty].wordCount;
+            words = [...fullBank].sort(() => Math.random() - 0.5).slice(0, count);
+            
             foundWords.clear();
             wordPlacements = [];
             grid = Array(gridSize).fill(null).map(() => Array(gridSize).fill(''));
             modal.classList.add('hidden');
+            
             generateGrid();
             renderGrid();
             renderWordList();
@@ -230,7 +242,7 @@
                 let placed = false;
                 let attempts = 0;
                 while (!placed && attempts < 200) {
-                    const dirIdx = Math.floor(Math.random() * 3); 
+                    const dirIdx = Math.floor(Math.random() * 3); // 0:H, 1:V, 2:D
                     const r = Math.floor(Math.random() * gridSize);
                     const col = Math.floor(Math.random() * gridSize);
                     if (canPlace(word, r, col, dirIdx)) {
@@ -242,10 +254,13 @@
                 }
             });
 
+            // Fill empty spots with random letters
             const alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
             for (let r = 0; r < gridSize; r++) {
                 for (let c = 0; c < gridSize; c++) {
-                    if (grid[r][c] === '') grid[r][c] = alpha[Math.floor(Math.random() * alpha.length)];
+                    if (grid[r][c] === '') {
+                        grid[r][c] = alpha[Math.floor(Math.random() * alpha.length)];
+                    }
                 }
             }
         }
@@ -254,6 +269,7 @@
             if (dir === 0 && c + word.length > gridSize) return false;
             if (dir === 1 && r + word.length > gridSize) return false;
             if (dir === 2 && (r + word.length > gridSize || c + word.length > gridSize)) return false;
+            
             for (let i = 0; i < word.length; i++) {
                 let currR = r, currC = c;
                 if (dir === 0) currC += i;
@@ -398,8 +414,8 @@
             foundWords.add(word);
             document.getElementById(`pill-${word}`)?.classList.add('word-found');
             
-            const sr = Math.sign(endCell.r - startCell.r);
-            const sc = Math.sign(endCell.c - startCell.c);
+            const sr = Math.sign(endCell.r - startCell.r || 0);
+            const sc = Math.sign(endCell.c - startCell.c || 0);
             const steps = Math.max(Math.abs(endCell.r - startCell.r), Math.abs(endCell.c - startCell.c));
             for (let i = 0; i <= steps; i++) {
                 const r = startCell.r + i * sr;
