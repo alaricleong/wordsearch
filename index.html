@@ -42,7 +42,6 @@
             text-shadow: 0 1px 1px rgba(255,255,255,0.5);
         }
 
-        /* Multicolored grid effect */
         .cell-bg-0 { background-color: #fff1f2; color: #be123c; }
         .cell-bg-1 { background-color: #f0fdf4; color: #15803d; }
         .cell-bg-2 { background-color: #eff6ff; color: #1d4ed8; }
@@ -126,7 +125,6 @@
 </head>
 <body class="max-w-sm mx-auto p-3">
 
-    <!-- Top Navigation -->
     <div class="flex justify-between items-center mb-1 shrink-0">
         <h1 class="text-xl font-black text-slate-800 tracking-tighter">WORD<span class="text-indigo-600">POP</span></h1>
         <div class="flex gap-1 bg-slate-100 p-1 rounded-xl">
@@ -136,14 +134,12 @@
         </div>
     </div>
 
-    <!-- Give Up / Hint Area -->
     <div class="flex justify-end mb-2 shrink-0 pr-1">
         <button onclick="giveUp()" class="text-[10px] font-bold text-slate-400 hover:text-rose-500 transition-colors flex items-center gap-1 uppercase tracking-tighter">
             <span>🏳️</span> Give Up
         </button>
     </div>
 
-    <!-- Progress & Selection Info -->
     <div class="flex justify-between items-center px-1 mb-1 shrink-0">
         <div id="progress-text" class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
             Found: 0 / 0
@@ -151,24 +147,19 @@
         <div id="selection-preview" class="font-black text-indigo-600 text-sm tracking-widest uppercase truncate max-w-[150px]"></div>
     </div>
 
-    <!-- Game Board -->
     <div class="relative shrink-0 mx-auto w-full">
         <div id="grid" class="grid-container"></div>
     </div>
 
-    <!-- Word List Section -->
     <div id="word-list-container">
         <div class="flex items-center gap-3 mb-3 px-2">
             <div class="h-[2px] flex-grow bg-slate-100"></div>
             <span id="words-left-count" class="text-[10px] font-black text-slate-400 tracking-widest uppercase">Initializing...</span>
             <div class="h-[2px] flex-grow bg-slate-100"></div>
         </div>
-        <div id="word-list" class="flex flex-wrap gap-2 justify-center overflow-y-auto pb-10">
-            <!-- Word pills -->
-        </div>
+        <div id="word-list" class="flex flex-wrap gap-2 justify-center overflow-y-auto pb-10"></div>
     </div>
 
-    <!-- Success Modal -->
     <div id="modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden flex items-center justify-center z-50 p-6">
         <div class="bg-white rounded-[40px] p-8 w-full max-w-[300px] text-center shadow-2xl transform transition-all scale-100">
             <div id="modal-icon" class="text-6xl mb-4">🏆</div>
@@ -188,21 +179,20 @@
     </div>
 
     <script>
-        // Expanded word banks to ensure unique sets every time
         const WORD_BANKS = {
-            easy: ["CAT", "DOG", "SUN", "FISH", "BIRD", "TREE", "BOX", "STAR", "MILK", "CAKE", "FROG", "DUCK", "MOON", "BOOK", "LAMP", "SNOW", "RAIN", "FIRE", "SHIP", "LEAF", "BALL", "KITE", "SOCK", "JUMP"],
-            medium: ["ORANGE", "BANANA", "CHERRY", "GRAPES", "LEMON", "APPLE", "PEACH", "MELON", "WINTER", "SUMMER", "SPRING", "AUTUMN", "ROCKET", "PLANET", "SILVER", "GOLDEN", "BRIGHT", "GENTLE", "FLOWER", "GARDEN", "SCHOOL", "COFFEE", "TURTLE", "RABBIT"],
-            hard: ["GALAXY", "QUASAR", "NEBULA", "COMET", "PLANET", "ORBIT", "ROCKET", "STAR", "SPACE", "MOON", "DIAMOND", "CRYSTAL", "PYRAMID", "VOLCANO", "PHANTOM", "THUNDER", "WHISPER", "JOURNEY", "MYSTERY", "KINGDOM", "ANCIENT", "BRAVERY", "FREEDOM", "HARMONY"]
+            easy: ["CAT", "DOG", "SUN", "FISH", "BIRD", "TREE", "BOX", "STAR", "MILK", "CAKE", "FROG", "DUCK", "MOON", "BOOK", "LAMP", "SNOW", "RAIN", "FIRE", "SHIP", "LEAF", "BALL", "KITE", "SOCK", "JUMP", "BLUE", "RED", "GOLD", "WIND", "BOWL", "HAT", "CUP", "ROAD", "CITY", "PARK"],
+            medium: ["ORANGE", "BANANA", "CHERRY", "GRAPES", "LEMON", "APPLE", "PEACH", "MELON", "WINTER", "SUMMER", "SPRING", "AUTUMN", "ROCKET", "PLANET", "SILVER", "GOLDEN", "BRIGHT", "GENTLE", "FLOWER", "GARDEN", "SCHOOL", "COFFEE", "TURTLE", "RABBIT", "BRIDGE", "CLOUDS", "STREET", "DREAMS", "GUITAR", "MUSEUM", "WINDOW", "BOTTLE", "BREEZE", "DESERT", "ISLAND"],
+            hard: ["GALAXY", "QUASAR", "NEBULA", "COMET", "PLANET", "ORBIT", "ROCKET", "STAR", "SPACE", "MOON", "DIAMOND", "CRYSTAL", "PYRAMID", "VOLCANO", "PHANTOM", "THUNDER", "WHISPER", "JOURNEY", "MYSTERY", "KINGDOM", "ANCIENT", "BRAVERY", "FREEDOM", "HARMONY", "ECLIPSE", "HORIZON", "INFINITY", "MAJESTY", "PHOENIX", "STARLIGHT", "TRIUMPH", "UNIVERSE", "VICTORY", "WONDER", "ZEPHYR"]
         };
 
         const CONFIG = {
-            easy: { size: 6, wordCount: 6 },
-            medium: { size: 8, wordCount: 8 },
-            hard: { size: 10, wordCount: 10 }
+            easy: { size: 7, wordCount: 8 },
+            medium: { size: 9, wordCount: 10 },
+            hard: { size: 11, wordCount: 12 }
         };
 
         let difficulty = 'easy';
-        let gridSize = 6;
+        let gridSize = 7;
         let words = [];
         let wordPlacements = []; 
         let grid = [];
@@ -210,7 +200,6 @@
         let isSelecting = false;
         let startCell = null;
         let endCell = null;
-        let gameFinishedByGiveUp = false;
 
         const gridElement = document.getElementById('grid');
         const wordListElement = document.getElementById('word-list');
@@ -237,7 +226,6 @@
             wordPlacements = [];
             grid = Array(gridSize).fill(null).map(() => Array(gridSize).fill(''));
             modal.classList.add('hidden');
-            gameFinishedByGiveUp = false;
             
             generateGrid();
             renderGrid();
@@ -249,7 +237,7 @@
             words.forEach(word => {
                 let placed = false;
                 let attempts = 0;
-                while (!placed && attempts < 200) {
+                while (!placed && attempts < 250) {
                     const dirIdx = Math.floor(Math.random() * 3); 
                     const r = Math.floor(Math.random() * gridSize);
                     const col = Math.floor(Math.random() * gridSize);
@@ -303,7 +291,7 @@
         function renderGrid() {
             gridElement.innerHTML = '';
             gridElement.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
-            const fontSize = gridSize === 6 ? '1.3rem' : gridSize === 8 ? '1rem' : '0.85rem';
+            const fontSize = gridSize <= 7 ? '1.1rem' : gridSize <= 9 ? '0.9rem' : '0.75rem';
             
             for (let r = 0; r < gridSize; r++) {
                 for (let c = 0; c < gridSize; c++) {
@@ -435,7 +423,6 @@
         }
 
         function giveUp() {
-            gameFinishedByGiveUp = true;
             wordPlacements.forEach(p => {
                 if (!foundWords.has(p.word)) {
                     p.coords.forEach(coord => {
@@ -454,29 +441,21 @@
             document.getElementById('modal-title').textContent = isNatural ? "CLEARED!" : "ANSWERS REVEALED";
             document.getElementById('modal-text').textContent = isNatural ? "Fantastic eye for detail!" : "Here are the hidden words. Ready to try another?";
             document.getElementById('modal-icon').textContent = isNatural ? "✨" : "💡";
-            
-            // Show/Hide share button based on how they finished
             document.getElementById('share-btn').style.display = isNatural ? 'flex' : 'none';
-            
             modal.classList.remove('hidden');
         }
 
         function shareToWhatsApp() {
             const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
             const diffText = difficulty.toUpperCase();
-            
-            // Create a small emoji grid representation
             let emojiGrid = "";
-            const rows = gridSize;
-            const cols = gridSize;
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
+            for (let r = 0; r < gridSize; r++) {
+                for (let c = 0; c < gridSize; c++) {
                     const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
                     emojiGrid += cell.classList.contains('found') ? "🟩" : "⬜";
                 }
                 emojiGrid += "%0A";
             }
-
             const text = `🧩 WordPop Pro%0A📅 ${dateStr}%0A🔥 Difficulty: ${diffText}%0A✅ Words Found: ${foundWords.size}/${words.length}%0A%0A${emojiGrid}%0ACan you beat my score?`;
             window.open(`https://wa.me/?text=${text}`, '_blank');
         }
