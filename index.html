@@ -63,10 +63,28 @@
             animation: pop 0.3s ease-out;
         }
 
+        .cell.hint {
+            background-color: #f59e0b !important;
+            color: white !important;
+            z-index: 20;
+            animation: pulse-hint 0.6s infinite alternate;
+        }
+
+        .cell.revealed-missed {
+            background-color: #fb7185 !important;
+            color: white !important;
+            text-shadow: none;
+        }
+
         @keyframes pop {
             0% { transform: scale(1); }
             50% { transform: scale(1.2); }
             100% { transform: scale(1); }
+        }
+
+        @keyframes pulse-hint {
+            from { transform: scale(1); box-shadow: 0 0 0px #f59e0b; }
+            to { transform: scale(1.15); box-shadow: 0 0 10px #f59e0b; }
         }
 
         .word-pill {
@@ -79,6 +97,11 @@
             font-weight: 800;
             color: #475569;
             display: inline-block;
+            cursor: pointer;
+        }
+
+        .word-pill:active {
+            transform: scale(0.95);
         }
 
         .word-found {
@@ -88,6 +111,7 @@
             text-decoration: line-through;
             text-decoration-thickness: 2px;
             opacity: 0.6;
+            pointer-events: none;
         }
 
         .difficulty-btn {
@@ -157,6 +181,7 @@
             <span id="words-left-count" class="text-[10px] font-black text-slate-400 tracking-widest uppercase">Initializing...</span>
             <div class="h-[2px] flex-grow bg-slate-100"></div>
         </div>
+        <div class="text-[9px] text-center text-slate-300 font-bold mb-2 uppercase tracking-tight">Tap a word for a hint</div>
         <div id="word-list" class="flex flex-wrap gap-2 justify-center overflow-y-auto pb-10"></div>
     </div>
 
@@ -186,13 +211,13 @@
         };
 
         const CONFIG = {
-            easy: { size: 7, wordCount: 8 },
-            medium: { size: 9, wordCount: 10 },
-            hard: { size: 11, wordCount: 12 }
+            easy: { size: 8, wordCount: 8 },
+            medium: { size: 10, wordCount: 10 },
+            hard: { size: 12, wordCount: 12 }
         };
 
         let difficulty = 'easy';
-        let gridSize = 7;
+        let gridSize = 8;
         let words = [];
         let wordPlacements = []; 
         let grid = [];
@@ -200,6 +225,7 @@
         let isSelecting = false;
         let startCell = null;
         let endCell = null;
+        let hintTimeout = null;
 
         const gridElement = document.getElementById('grid');
         const wordListElement = document.getElementById('word-list');
@@ -234,22 +260,39 @@
         }
 
         function generateGrid() {
-            words.forEach(word => {
+            // Sort words longest first to make placement easier
+            const sortedWords = [...words].sort((a, b) => b.length - a.length);
+            let placedCount = 0;
+
+            sortedWords.forEach(word => {
                 let placed = false;
                 let attempts = 0;
-                while (!placed && attempts < 250) {
-                    const dirIdx = Math.floor(Math.random() * 3); 
+                // Increased max attempts and refined randomization
+                while (!placed && attempts < 1000) {
+                    const dirIdx = Math.floor(Math.random() * 3); // 0: Horiz, 1: Vert, 2: Diag
                     const r = Math.floor(Math.random() * gridSize);
                     const col = Math.floor(Math.random() * gridSize);
+                    
                     if (canPlace(word, r, col, dirIdx)) {
                         const coords = place(word, r, col, dirIdx);
                         wordPlacements.push({ word, coords });
                         placed = true;
+                        placedCount++;
                     }
                     attempts++;
                 }
+                
+                // If a word absolutely failed to place, we force a restart of generation 
+                // to guarantee the user always sees a complete list.
+                if (!placed) {
+                    grid = Array(gridSize).fill(null).map(() => Array(gridSize).fill(''));
+                    wordPlacements = [];
+                    generateGrid(); 
+                    return; 
+                }
             });
 
+            // Fill empty spaces with random letters
             const alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
             for (let r = 0; r < gridSize; r++) {
                 for (let c = 0; c < gridSize; c++) {
@@ -291,7 +334,7 @@
         function renderGrid() {
             gridElement.innerHTML = '';
             gridElement.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
-            const fontSize = gridSize <= 7 ? '1.1rem' : gridSize <= 9 ? '0.9rem' : '0.75rem';
+            const fontSize = gridSize <= 8 ? '1rem' : gridSize <= 10 ? '0.85rem' : '0.7rem';
             
             for (let r = 0; r < gridSize; r++) {
                 for (let c = 0; c < gridSize; c++) {
@@ -320,8 +363,29 @@
                 div.className = 'word-pill';
                 div.id = `pill-${word}`;
                 div.textContent = word;
+                div.onclick = () => showHint(word);
                 wordListElement.appendChild(div);
             });
+        }
+
+        function showHint(word) {
+            if (foundWords.has(word)) return;
+            
+            // Clear existing hints
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('hint'));
+            if (hintTimeout) clearTimeout(hintTimeout);
+
+            const placement = wordPlacements.find(p => p.word === word);
+            if (placement) {
+                placement.coords.forEach(coord => {
+                    const cell = document.querySelector(`[data-row="${coord.r}"][data-col="${coord.c}"]`);
+                    if (cell) cell.classList.add('hint');
+                });
+
+                hintTimeout = setTimeout(() => {
+                    document.querySelectorAll('.cell').forEach(c => c.classList.remove('hint'));
+                }, 2000);
+            }
         }
 
         function updateUI() {
@@ -368,8 +432,8 @@
             
             document.querySelectorAll('.cell').forEach(c => c.classList.remove('highlighted'));
             const steps = Math.max(Math.abs(endCell.r - startCell.r), Math.abs(endCell.c - startCell.c));
-            const sr = Math.sign(endCell.r - startCell.r);
-            const sc = Math.sign(endCell.c - startCell.c);
+            const sr = Math.sign(endCell.r - startCell.r || 0);
+            const sc = Math.sign(endCell.c - startCell.c || 0);
 
             for (let i = 0; i <= steps; i++) {
                 const r = startCell.r + i * sr;
@@ -383,10 +447,14 @@
             if (!startCell || !endCell) return "";
             let word = "";
             const steps = Math.max(Math.abs(endCell.r - startCell.r), Math.abs(endCell.c - startCell.c));
-            const sr = Math.sign(endCell.r - startCell.r);
-            const sc = Math.sign(endCell.c - startCell.c);
+            const sr = Math.sign(endCell.r - startCell.r || 0);
+            const sc = Math.sign(endCell.c - startCell.c || 0);
             for (let i = 0; i <= steps; i++) {
-                word += grid[startCell.r + i * sr][startCell.c + i * sc];
+                const r = startCell.r + i * sr;
+                const c = startCell.c + i * sc;
+                if (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
+                    word += grid[r][c];
+                }
             }
             return word;
         }
@@ -411,14 +479,12 @@
             foundWords.add(word);
             document.getElementById(`pill-${word}`)?.classList.add('word-found');
             
-            const sr = Math.sign(endCell.r - startCell.r || 0);
-            const sc = Math.sign(endCell.c - startCell.c || 0);
-            const steps = Math.max(Math.abs(endCell.r - startCell.r), Math.abs(endCell.c - startCell.c));
-            for (let i = 0; i <= steps; i++) {
-                const r = startCell.r + i * sr;
-                const c = startCell.c + i * sc;
-                const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
-                if(cell) cell.classList.add('found');
+            const placement = wordPlacements.find(p => p.word === word);
+            if (placement) {
+                placement.coords.forEach(coord => {
+                    const cell = document.querySelector(`[data-row="${coord.r}"][data-col="${coord.c}"]`);
+                    if (cell) cell.classList.add('found');
+                });
             }
         }
 
@@ -427,7 +493,7 @@
                 if (!foundWords.has(p.word)) {
                     p.coords.forEach(coord => {
                         const cell = document.querySelector(`[data-row="${coord.r}"][data-col="${coord.c}"]`);
-                        if (cell) cell.classList.add('found');
+                        if (cell) cell.classList.add('revealed-missed');
                     });
                     document.getElementById(`pill-${p.word}`)?.classList.add('word-found');
                     foundWords.add(p.word);
@@ -439,7 +505,7 @@
 
         function showWin(isNatural) {
             document.getElementById('modal-title').textContent = isNatural ? "CLEARED!" : "ANSWERS REVEALED";
-            document.getElementById('modal-text').textContent = isNatural ? "Fantastic eye for detail!" : "Here are the hidden words. Ready to try another?";
+            document.getElementById('modal-text').textContent = isNatural ? "Fantastic eye for detail!" : "Here were the words you missed. Keep practicing!";
             document.getElementById('modal-icon').textContent = isNatural ? "✨" : "💡";
             document.getElementById('share-btn').style.display = isNatural ? 'flex' : 'none';
             modal.classList.remove('hidden');
